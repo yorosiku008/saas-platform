@@ -2,11 +2,30 @@
 import { useEffect, useState } from "react"
 import { getScan, PRODUCT_LABELS, Scan } from "@/lib/scans"
 import { ScanResultRenderer } from "@/components/ScanResultRenderer"
+import { api } from "@/lib/api"
 import Link from "next/link"
 
 export default function ScanDetailPage({ params }: { params: { id: string } }) {
   const [scan, setScan] = useState<Scan | null>(null)
   const [loading, setLoading] = useState(true)
+  const [exporting, setExporting] = useState(false)
+
+  async function handleExport() {
+    if (!scan) return
+    setExporting(true)
+    try {
+      const res = await api.get(`/scans/${scan.id}/export`, { responseType: "blob" })
+      const url = URL.createObjectURL(new Blob([res.data]))
+      const a = document.createElement("a")
+      const date = new Date(scan.created_at).toISOString().slice(0, 10).replace(/-/g, "")
+      a.href = url
+      a.download = `${scan.product}_report_${date}.md`
+      a.click()
+      URL.revokeObjectURL(url)
+    } finally {
+      setExporting(false)
+    }
+  }
 
   useEffect(() => {
     async function load() {
@@ -59,13 +78,24 @@ export default function ScanDetailPage({ params }: { params: { id: string } }) {
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-xl font-bold">{PRODUCT_LABELS[scan.product]} スキャン結果</h1>
-            <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-              scan.status === "completed" ? "bg-green-100 text-green-800" :
-              scan.status === "failed" ? "bg-red-100 text-red-800" :
-              "bg-yellow-100 text-yellow-800"
-            }`}>
-              {scan.status === "completed" ? "完了" : scan.status === "failed" ? "失敗" : "処理中..."}
-            </span>
+            <div className="flex items-center gap-3">
+              {scan.status === "completed" && (
+                <button
+                  onClick={handleExport}
+                  disabled={exporting}
+                  className="text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {exporting ? "出力中..." : "Markdown 出力"}
+                </button>
+              )}
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                scan.status === "completed" ? "bg-green-100 text-green-800" :
+                scan.status === "failed" ? "bg-red-100 text-red-800" :
+                "bg-yellow-100 text-yellow-800"
+              }`}>
+                {scan.status === "completed" ? "完了" : scan.status === "failed" ? "失敗" : "処理中..."}
+              </span>
+            </div>
           </div>
           <p className="text-sm text-gray-500">
             実行日時: {new Date(scan.created_at).toLocaleString("ja-JP")}

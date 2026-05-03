@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, status
+from fastapi.responses import PlainTextResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.core.database import get_db
@@ -10,6 +11,7 @@ from app.models.user import User
 from app.api.schemas import ScanCreate, ScanResponse
 from app.api.deps import get_current_user
 from app.services.scan_engine import run_scan
+from app.services.report_generator import generate_markdown_report
 
 router = APIRouter(prefix="/scans", tags=["scans"])
 
@@ -117,3 +119,30 @@ async def get_scan(
     if not scan:
         raise HTTPException(status_code=404, detail="Scan not found")
     return scan
+
+
+@router.get("/{scan_id}/export", response_class=PlainTextResponse)
+async def export_scan(
+    scan_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        scan_uuid = uuid.UUID(scan_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Scan not found")
+    result = await db.execute(
+        select(ScanResult).where(ScanResult.id == scan_uuid, ScanResult.org_id == current_user.org_id)
+    )
+    scan = result.scalar_one_or_none()
+    if not scan:
+        raise HTTPException(status_code=404, detail="Scan not found")
+    if scan.status != "completed" or not scan.result:
+        raise HTTPException(status_code=400, detail="Scan not completed yet")
+
+    md = generate_markdown_report(scan.product, scan.result, scan.created_at)
+    filename = f"{scan.product}_report_{scan.created_at.strftime('%Y%m%d')}.md"
+    return PlainTextResponse(
+        content=md,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
