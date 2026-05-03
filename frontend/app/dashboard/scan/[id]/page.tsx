@@ -1,6 +1,7 @@
 "use client"
 import { useEffect, useState } from "react"
 import { getScan, PRODUCT_LABELS, Scan } from "@/lib/scans"
+import { ScanResultRenderer } from "@/components/ScanResultRenderer"
 import Link from "next/link"
 
 export default function ScanDetailPage({ params }: { params: { id: string } }) {
@@ -79,9 +80,7 @@ export default function ScanDetailPage({ params }: { params: { id: string } }) {
         {scan.result && (
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h2 className="font-semibold text-gray-800 mb-4">スキャン結果</h2>
-            <pre className="bg-gray-50 rounded-lg p-4 text-xs overflow-auto max-h-96 text-gray-700">
-              {JSON.stringify(scan.result, null, 2)}
-            </pre>
+            <ScanResultRenderer product={scan.product} result={scan.result} />
           </div>
         )}
 
