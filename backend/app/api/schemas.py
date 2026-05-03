@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 
 
 # Auth
@@ -22,24 +22,22 @@ class TokenResponse(BaseModel):
 
 
 class UserResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: uuid.UUID
     email: str
     role: str
     org_id: uuid.UUID
 
-    class Config:
-        from_attributes = True
-
 
 # Organization
 class OrgResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: uuid.UUID
     name: str
     plan: str
     created_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 # AWS Connection
@@ -50,14 +48,13 @@ class AwsConnectionCreate(BaseModel):
 
 
 class AwsConnectionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: uuid.UUID
     name: str
     aws_account_id: str | None
     role_arn: str
     created_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 # Scan
@@ -68,6 +65,8 @@ class ScanCreate(BaseModel):
 
 
 class ScanResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: uuid.UUID
     product: str
     status: str
@@ -75,6 +74,3 @@ class ScanResponse(BaseModel):
     report_url: str | None
     created_at: datetime
     completed_at: datetime | None
-
-    class Config:
-        from_attributes = True
